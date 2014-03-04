@@ -1,0 +1,22 @@
+{
+    "test": {
+        "properties": {
+            "img": {
+                "type": "image",
+                "feature": {
+                    "CEDD": {
+                        "hash": "BIT_SAMPLING"
+                    },
+                    "JCD": {
+                        "hash": ["BIT_SAMPLING", "LSH"]
+                    },
+                    "FCTH": {}
+                }
+            },
+            "name": {
+                "type": "string",
+                "index": "not_analyzed"
+            }
+        }
+    }
+}
