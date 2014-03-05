@@ -8,9 +8,12 @@ The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch us
 It adds an `image` field type and an `image` query
 
 
+In order to install the plugin, simply run: `bin/plugin -install com.github.kzwang/elasticsearch-image/1.0.0`.
+
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
-| 1.0.0-SNAPSHOT (master)   | 1.0.1             |              |
+| 1.1.0-SNAPSHOT (master)   | 1.0.1             |              |
+| 1.0.0                     | 1.0.1             | 2014-03-05   |
 
 
 ## Example
