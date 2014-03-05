@@ -8,9 +8,9 @@ The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch us
 It adds an `image` field type and an `image` query
 
 
-|     Image Plugin          |  elasticsearch    |   LIRE         | Release date |
-|---------------------------|-------------------|----------------|:------------:|
-| 1.0.0-SNAPSHOT (master)   | 1.0.1             | 0.9.4-SNAPSHOT |              |
+|     Image Plugin          |  elasticsearch    | Release date |
+|---------------------------|-------------------|:------------:|
+| 1.0.0-SNAPSHOT (master)   | 1.0.1             |              |
 
 
 ## Example

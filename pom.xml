@@ -67,7 +67,7 @@
         <dependency>
             <groupId>com.github.kzwang</groupId>  <!-- Modified to deploy on maven -->
             <artifactId>lire</artifactId>
-            <version>0.9.4-SNAPSHOT</version>
+            <version>0.9.4-kzwang-beta1</version>
         </dependency>
 
         <dependency>
