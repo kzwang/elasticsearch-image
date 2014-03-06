@@ -19,6 +19,8 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
 
     private float boost = -1;
 
+    private int limit = -1;
+
     public ImageQueryBuilder(String fieldName) {
         this.fieldName = fieldName;
     }
@@ -35,6 +37,11 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
 
     public ImageQueryBuilder hash(String hash) {
         this.hash = hash;
+        return this;
+    }
+
+    public ImageQueryBuilder limit(int limit) {
+        this.limit = limit;
         return this;
     }
 
@@ -58,6 +65,10 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
 
         if (boost != -1) {
             builder.field("boost", boost);
+        }
+
+        if (limit != -1) {
+            builder.field("limit", limit);
         }
 
         builder.endObject();

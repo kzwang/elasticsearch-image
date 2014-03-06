@@ -1,5 +1,8 @@
 {
     "test": {
+        "_source": {
+            "excludes": ["img"]
+        },
         "properties": {
             "img": {
                 "type": "image",
