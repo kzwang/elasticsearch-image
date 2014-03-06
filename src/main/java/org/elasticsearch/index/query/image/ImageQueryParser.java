@@ -48,6 +48,7 @@ public class ImageQueryParser implements QueryParser {
         byte[] image = null;
         HashEnum hashEnum = null;
         float boost = 1.0f;
+        int limit = -1;
 
 
         token = parser.nextToken();
@@ -65,6 +66,8 @@ public class ImageQueryParser implements QueryParser {
                         hashEnum = HashEnum.getByName(parser.text());
                     } else if ("boost".equals(currentFieldName)) {
                         boost = parser.floatValue();
+                    } else if ("limit".equals(currentFieldName)) {
+                        limit = parser.intValue();
                     } else {
                         throw new QueryParsingException(parseContext.index(), "[image] query does not support [" + currentFieldName + "]");
                     }
@@ -102,13 +105,20 @@ public class ImageQueryParser implements QueryParser {
             } else if (hashEnum.equals(HashEnum.LSH)) {
                 hash = LocalitySensitiveHashing.generateHashes(feature.getDoubleHistogram());
             }
-            BooleanQuery query = new BooleanQuery(true);
-            ImageScoreCache imageScoreCache = new ImageScoreCache();
             String hashFieldName = luceneFieldName + "." + ImageMapper.HASH + "." + hashEnum.name();
-            for (int h : hash) {
-                query.add(new BooleanClause(new ImageHashQuery(new Term(hashFieldName, Integer.toString(h)), luceneFieldName, feature, imageScoreCache, boost), BooleanClause.Occur.SHOULD));
+
+            if (limit > 0) {  // has max result limit, use ImageHashLimitQuery
+                return new ImageHashLimitQuery(hashFieldName, hash, limit, luceneFieldName, feature, boost);
+            } else {  // no max result limit, use ImageHashQuery
+                BooleanQuery query = new BooleanQuery(true);
+                ImageScoreCache imageScoreCache = new ImageScoreCache();
+
+                for (int h : hash) {
+                    query.add(new BooleanClause(new ImageHashQuery(new Term(hashFieldName, Integer.toString(h)), luceneFieldName, feature, imageScoreCache, boost), BooleanClause.Occur.SHOULD));
+                }
+                return query;
             }
-            return query;
+
         }
     }
 }

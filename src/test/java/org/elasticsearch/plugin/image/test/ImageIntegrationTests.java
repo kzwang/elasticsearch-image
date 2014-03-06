@@ -24,9 +24,11 @@ import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilde
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import static org.hamcrest.Matchers.*;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.*;
 
 @ElasticsearchIntegrationTest.ClusterScope(transportClientRatio = 0.0, numNodes = 2, scope = ElasticsearchIntegrationTest.Scope.TEST)
 public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
+
 
     @Before
     public void createEmptyIndex() throws Exception {
@@ -39,7 +41,8 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
     @Override
     public Settings indexSettings() {
         return settingsBuilder()
-                .put("index.numberOfReplicas", 1)
+                .put("index.numberOfReplicas", 0)
+                .put("index.number_of_shards", 5)
             .build();
     }
 
@@ -82,6 +85,7 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         // test search with hash
         ImageQueryBuilder imageQueryBuilder = new ImageQueryBuilder("img").feature(FeatureEnum.CEDD.name()).image(imgToSearch).hash(HashEnum.BIT_SAMPLING.name());
         SearchResponse searchResponse = client().prepareSearch("test").setTypes("test").setQuery(imageQueryBuilder).get();
+        assertNoFailures(searchResponse);
         SearchHits hits = searchResponse.getHits();
         assertThat("Should match at least one image", hits.getTotalHits(), greaterThanOrEqualTo(1l)); // if using hash, total result maybe different than number of images
         SearchHit hit = hits.getHits()[0];
@@ -91,6 +95,7 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         // test search without hash and with boost
         ImageQueryBuilder imageQueryBuilder2 = new ImageQueryBuilder("img").feature(FeatureEnum.JCD.name()).image(imgToSearch).boost(2.0f);
         SearchResponse searchResponse2 = client().prepareSearch("test").setTypes("test").setQuery(imageQueryBuilder2).get();
+        assertNoFailures(searchResponse2);
         SearchHits hits2 = searchResponse2.getHits();
         assertThat("Should match at least one image", hits2.getTotalHits(), equalTo((long)files.length));  // no hash used, total result should be same as number of images
         SearchHit hit2 = hits2.getHits()[0];
@@ -102,10 +107,21 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         boolQueryBuilder.must(QueryBuilders.termQuery("name", fileToSearch.getName()));
         boolQueryBuilder.must(new ImageQueryBuilder("img").feature(FeatureEnum.JCD.name()).image(imgToSearch));
         SearchResponse searchResponse3 = client().prepareSearch("test").setTypes("test").setQuery(boolQueryBuilder).get();
+        assertNoFailures(searchResponse3);
         SearchHits hits3 = searchResponse3.getHits();
         assertThat("Should match one document only", hits3.getTotalHits(), equalTo(1l)); // added filename to query, should have only one result
         SearchHit hit3 = hits3.getHits()[0];
         assertThat((String)hit3.getSource().get("name"), equalTo(fileToSearch.getName()));
+
+        // test search with hash and limit
+        ImageQueryBuilder imageQueryBuilder4 = new ImageQueryBuilder("img").feature(FeatureEnum.JCD.name()).image(imgToSearch).hash(HashEnum.BIT_SAMPLING.name()).limit(10);
+        SearchResponse searchResponse4 = client().prepareSearch("test").setTypes("test").setQuery(imageQueryBuilder4).get();
+        assertNoFailures(searchResponse4);
+        SearchHits hits4 = searchResponse4.getHits();
+        assertThat("Should match at least one image", hits4.getTotalHits(), greaterThanOrEqualTo(1l)); // if using hash, total result maybe different than number of images
+        SearchHit hit4 = hits4.getHits()[0];
+        assertThat("First should be exact match and has score 1", hit4.getScore(), equalTo(1.0f));
+        assertThat((String)hit4.getSource().get("name"), equalTo(fileToSearch.getName()));
 
     }
 
