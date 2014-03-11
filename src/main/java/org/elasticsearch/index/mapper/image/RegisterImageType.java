@@ -12,7 +12,6 @@ public class RegisterImageType extends AbstractIndexComponent {
     @Inject
     public RegisterImageType(Index index, @IndexSettings Settings indexSettings, MapperService mapperService) {
         super(index, indexSettings);
-
         mapperService.documentMapperParser().putTypeParser("image", new ImageMapper.TypeParser());
     }
 }

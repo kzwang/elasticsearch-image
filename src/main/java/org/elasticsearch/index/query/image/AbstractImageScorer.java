@@ -6,7 +6,9 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
-import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticsearchImageProcessException;
+
+import java.io.IOException;
 
 /**
  * Calculate score for each image
@@ -28,10 +30,10 @@ public abstract class AbstractImageScorer extends Scorer {
     }
 
     @Override
-    public float score() {
+    public float score() throws IOException {
         assert docID() != NO_MORE_DOCS;
+        Document document = reader.document(docID());
         try {
-            Document document = reader.document(docID());
             byte[] docImage = null;
             for (IndexableField f : document.getFields()) {
                 if (f.name().equals(luceneFieldName)) {
@@ -40,7 +42,7 @@ public abstract class AbstractImageScorer extends Scorer {
                 }
             }
             if (docImage == null) {
-                throw new ElasticsearchException("Can't find " + luceneFieldName);
+                throw new ElasticsearchImageProcessException("Can't find " + luceneFieldName);
             }
             LireFeature docFeature = lireFeature.getClass().newInstance();
             docFeature.setByteArrayRepresentation(docImage);
@@ -54,7 +56,7 @@ public abstract class AbstractImageScorer extends Scorer {
             }
             return score * boost;
         } catch (Exception e) {
-            throw new ElasticsearchException("Failed to calculate score", e);
+            throw new ElasticsearchImageProcessException("Failed to calculate score", e);
         }
     }
 

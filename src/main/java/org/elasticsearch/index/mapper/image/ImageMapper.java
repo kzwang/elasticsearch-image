@@ -6,8 +6,8 @@ import net.semanticmetadata.lire.indexing.hashing.LocalitySensitiveHashing;
 import net.semanticmetadata.lire.utils.ImageUtils;
 import net.semanticmetadata.lire.utils.SerializationUtils;
 import org.apache.lucene.document.StoredField;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
+import org.elasticsearch.ElasticsearchImageProcessException;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.collect.Maps;
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import static org.elasticsearch.index.mapper.MapperBuilders.binaryField;
 import static org.elasticsearch.index.mapper.MapperBuilders.stringField;
 
 
@@ -68,11 +69,17 @@ public class ImageMapper implements Mapper {
 
         @Override
         public ImageMapper build(BuilderContext context) {
+            Map<String, Mapper> featureMappers = Maps.newHashMap();
             Map<String, Mapper> hashMappers = Maps.newHashMap();
             for (String feature : features.keySet()) {
                 Map<String, Object> featureMap = features.get(feature);
 
-                // hash is required
+                // add feature mapper
+                String featureFieldName = name + "." + feature;
+                featureMappers.put(feature, binaryField(featureFieldName).store(true).includeInAll(false).index(false).build(context));
+
+
+                // add hash mapper if hash is required
                 if (featureMap.containsKey(HASH)){
                     List<String> hashes = (List<String>) featureMap.get(HASH);
                     for (String h : hashes) {
@@ -82,12 +89,11 @@ public class ImageMapper implements Mapper {
                     }
                 }
             }
-            return new ImageMapper(name, features, hashMappers);
+            return new ImageMapper(name, features, featureMappers, hashMappers);
         }
     }
 
     public static class TypeParser implements Mapper.TypeParser {
-
         @SuppressWarnings({"unchecked"})
         @Override
         public Mapper.Builder parse(String name, Map<String, Object> node, ParserContext parserContext) throws MapperParsingException {
@@ -138,12 +144,18 @@ public class ImageMapper implements Mapper {
 
     private volatile ImmutableOpenMap<String, Map<String, Object>> features = ImmutableOpenMap.of();
 
+    private volatile ImmutableOpenMap<String, Mapper> featureMappers = ImmutableOpenMap.of();
+
     private volatile ImmutableOpenMap<String, Mapper> hashMappers = ImmutableOpenMap.of();
 
-    public ImageMapper(String name, Map<String, Map<String, Object>> features, Map<String, Mapper> hashMappers) {
+
+    public ImageMapper(String name, Map<String, Map<String, Object>> features, Map<String, Mapper> featureMappers, Map<String, Mapper> hashMappers) {
         this.name = name;
         if (features != null) {
             this.features = ImmutableOpenMap.builder(this.features).putAll(features).build();
+        }
+        if (featureMappers != null) {
+            this.featureMappers = ImmutableOpenMap.builder(this.featureMappers).putAll(featureMappers).build();
         }
         if (hashMappers != null) {
             this.hashMappers = ImmutableOpenMap.builder(this.hashMappers).putAll(hashMappers).build();
@@ -206,7 +218,7 @@ public class ImageMapper implements Mapper {
                     }
                 }
             } catch (Exception e) {
-                throw new ElasticsearchException("Failed to index feature " + featureEnum.name(), e);
+                throw new ElasticsearchImageProcessException("Failed to index feature " + featureEnum.name(), e);
             }
         }
 
@@ -218,6 +230,9 @@ public class ImageMapper implements Mapper {
 
     @Override
     public void traverse(FieldMapperListener fieldMapperListener) {
+        for (ObjectObjectCursor<String, Mapper> cursor : featureMappers) {
+            cursor.value.traverse(fieldMapperListener);
+        }
         for (ObjectObjectCursor<String, Mapper> cursor : hashMappers) {
             cursor.value.traverse(fieldMapperListener);
         }

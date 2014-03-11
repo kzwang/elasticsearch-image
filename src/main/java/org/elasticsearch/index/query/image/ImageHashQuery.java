@@ -41,7 +41,7 @@ public class ImageHashQuery extends Query {
         }
 
         @Override
-        public float score() {
+        public float score() throws IOException {
             assert docID() != NO_MORE_DOCS;
             int docId = docID();
             String cacheKey = reader.toString() + ":" + docId;

@@ -9,7 +9,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
-import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticsearchImageProcessException;
 import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.image.FeatureEnum;
@@ -93,7 +93,7 @@ public class ImageQueryParser implements QueryParser {
             }
             feature.extract(img);
         } catch (Exception e) {
-            throw new ElasticsearchException("Failed to parse image", e);
+            throw new ElasticsearchImageProcessException("Failed to parse image", e);
         }
 
         if (hashEnum == null) {  // no hash, need to scan all documents
