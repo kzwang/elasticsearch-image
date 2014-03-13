@@ -181,16 +181,17 @@ public class ImageMapper implements Mapper {
             throw new MapperParsingException("No content is provided.");
         }
 
+        BufferedImage img = ImageIO.read(new BytesStreamInput(content, false));
+        if (Math.max(img.getHeight(), img.getWidth()) > MAX_IMAGE_DIMENSION) {
+            img = ImageUtils.scaleImage(img, MAX_IMAGE_DIMENSION);
+        }
+
         for (ObjectObjectCursor<String, Map<String, Object>> cursor : features) {
             FeatureEnum featureEnum = FeatureEnum.getByName(cursor.key);
             Map<String, Object> featureMap = cursor.value;
 
             try {
                 LireFeature lireFeature = featureEnum.getFeatureClass().newInstance();
-                BufferedImage img = ImageIO.read(new BytesStreamInput(content, false));
-                if (Math.max(img.getHeight(), img.getWidth()) > MAX_IMAGE_DIMENSION) {
-                    img = ImageUtils.scaleImage(img, MAX_IMAGE_DIMENSION);
-                }
                 lireFeature.extract(img);
                 byte[] parsedContent = lireFeature.getByteArrayRepresentation();
                 String featureFieldName = name + "." + featureEnum.name();
