@@ -3,16 +3,18 @@ Image Plugin for Elasticsearch
 
 [![Build Status](https://travis-ci.org/kzwang/elasticsearch-image.png?branch=master)](https://travis-ci.org/kzwang/elasticsearch-image)
 
-The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch using [LIRE (Lucene Image Retrieval)](https://code.google.com/p/lire/).
+The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch using [LIRE (Lucene Image Retrieval)](https://code.google.com/p/lire/). It allows users to index images and search for similar images.
 
 It adds an `image` field type and an `image` query
 
+See [http://demo.elasticsearch-image.com](http://demo.elasticsearch-image.com) for a demo of the plugin
 
-In order to install the plugin, simply run: `bin/plugin -install com.github.kzwang/elasticsearch-image/1.0.0`.
+In order to install the plugin, simply run: `bin/plugin -install com.github.kzwang/elasticsearch-image/1.1.0`.
 
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
-| 1.1.0-SNAPSHOT (master)   | 1.0.1             |              |
+| 1.2.0-SNAPSHOT (master)   | 1.0.1             |              |
+| 1.1.0                     | 1.0.1             | 2014-03-13   |
 | 1.0.0                     | 1.0.1             | 2014-03-05   |
 
 
@@ -61,7 +63,8 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
                 "feature": "CEDD",
                 "image": "... base64 encoded image to search ...",
                 "hash": "BIT_SAMPLING",
-                "boost": 2.1
+                "boost": 2.1,
+                "limit": 100
             }
         }
     }
@@ -72,6 +75,8 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
 `image` base64 of image to search.  **Mandatory**
 
 `hash` should be same to the hash set in mapping.  **Optional**
+
+`limit` limit the number of results returned (per shard) for scoring. **Optional, only works when `hash` is specified**
 
 `boost` score boost  **Optional**
 
@@ -92,3 +97,15 @@ Additional formats can be supported by ImageIO plugins, for example [TwelveMonke
 Hash will increase search speed with large data sets
 
 See [Large image data sets with LIRE – some new numbers](http://www.semanticmetadata.net/2013/03/20/large-image-data-sets-with-lire-some-new-numbers/) 
+
+
+##ChangeLog
+
+#### 1.1.0 (2014-03-13)
+
+- Added `limit` in `image` query
+- Added plugin version in es-plugin.properties
+
+#### 1.0.0 (2014-03-05)
+
+- initial release
