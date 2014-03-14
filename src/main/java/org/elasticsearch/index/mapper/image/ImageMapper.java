@@ -1,5 +1,10 @@
 package org.elasticsearch.index.mapper.image;
 
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.Tag;
 import net.semanticmetadata.lire.imageanalysis.LireFeature;
 import net.semanticmetadata.lire.indexing.hashing.BitSampling;
 import net.semanticmetadata.lire.indexing.hashing.LocalitySensitiveHashing;
@@ -23,6 +28,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +50,9 @@ public class ImageMapper implements Mapper {
 
     public static final String HASH = "hash";
 
+    public static final String FEATURE = "feature";
+    public static final String METADATA = "metadata";
+
     public static final String BIT_SAMPLING_FILE = "/hash/LshBitSampling.obj";
     public static final String LSH_HASH_FILE = "/hash/lshHashFunctions.obj";
 
@@ -63,6 +72,8 @@ public class ImageMapper implements Mapper {
 
         private Map<FeatureEnum, Map<String, Object>> features = Maps.newHashMap();
 
+        private Map<String, Mapper.Builder> metadataBuilders = Maps.newHashMap();
+
         public Builder(String name, ThreadPool threadPool) {
             super(name);
             this.threadPool = threadPool;
@@ -74,30 +85,48 @@ public class ImageMapper implements Mapper {
             return this;
         }
 
+        public Builder addMetadata(String metadata, Mapper.Builder metadataBuilder) {
+            this.metadataBuilders.put(metadata, metadataBuilder);
+            return this;
+        }
+
         @Override
         public ImageMapper build(BuilderContext context) {
             Map<String, Mapper> featureMappers = Maps.newHashMap();
             Map<String, Mapper> hashMappers = Maps.newHashMap();
+            Map<String, Mapper> metadataMappers = Maps.newHashMap();
+
+            context.path().add(name);
+            // add feature and hash mappers
             for (FeatureEnum featureEnum : features.keySet()) {
                 Map<String, Object> featureMap = features.get(featureEnum);
                 String featureName = featureEnum.name();
 
                 // add feature mapper
-                String featureFieldName = name + "." + featureName;
-                featureMappers.put(featureName, binaryField(featureFieldName).store(true).includeInAll(false).index(false).build(context));
+                featureMappers.put(featureName, binaryField(featureName).store(true).includeInAll(false).index(false).build(context));
 
 
                 // add hash mapper if hash is required
                 if (featureMap.containsKey(HASH)){
                     List<String> hashes = (List<String>) featureMap.get(HASH);
                     for (String h : hashes) {
-                        String hashFieldName = name + "." + featureName + "." + HASH + "." + h;
-                        String mapperName = featureName + "." + h;
-                        hashMappers.put(mapperName, stringField(hashFieldName).store(true).includeInAll(false).index(true).build(context));
+                        String hashFieldName = featureName + "." + HASH + "." + h;
+                        hashMappers.put(hashFieldName, stringField(hashFieldName).store(true).includeInAll(false).index(true).build(context));
                     }
                 }
             }
-            return new ImageMapper(name, threadPool, features, featureMappers, hashMappers);
+
+            // add metadata mappers
+            context.path().add(METADATA);
+            for (Map.Entry<String, Mapper.Builder> entry : metadataBuilders.entrySet()){
+                String metadataName = entry.getKey();
+                Mapper.Builder metadataBuilder = entry.getValue();
+                metadataMappers.put(metadataName, metadataBuilder.build(context));
+            }
+            context.path().remove();  // remove METADATA
+            context.path().remove();  // remove name
+
+            return new ImageMapper(name, threadPool, features, featureMappers, hashMappers, metadataMappers);
         }
     }
 
@@ -112,14 +141,17 @@ public class ImageMapper implements Mapper {
         @Override
         public Mapper.Builder parse(String name, Map<String, Object> node, ParserContext parserContext) throws MapperParsingException {
             ImageMapper.Builder builder = new ImageMapper.Builder(name, threadPool);
-            Map<String, Object> features = null;
+            Map<String, Object> features = Maps.newHashMap();
+            Map<String, Object> metadatas = Maps.newHashMap();
 
             for (Map.Entry<String, Object> entry : node.entrySet()) {
                 String fieldName = entry.getKey();
                 Object fieldNode = entry.getValue();
 
-                if ("feature".equals(fieldName)) {
+                if (FEATURE.equals(fieldName)) {
                     features = (Map<String, Object>) fieldNode;
+                } else if (METADATA.equals(fieldName)) {
+                    metadatas = (Map<String, Object>) fieldNode;
                 }
             }
 
@@ -128,8 +160,9 @@ public class ImageMapper implements Mapper {
             }
 
             // process features
-            for (String feature : features.keySet()) {
-                Map<String, Object> featureMap = (Map<String, Object>) features.get(feature);
+            for (Map.Entry<String, Object> entry : features.entrySet()) {
+                String feature = entry.getKey();
+                Map<String, Object> featureMap = (Map<String, Object>) entry.getValue();
 
                 // process hash for each feature
                 if (featureMap.containsKey(HASH)) {
@@ -150,6 +183,16 @@ public class ImageMapper implements Mapper {
                 FeatureEnum featureEnum = FeatureEnum.getByName(feature);
                 builder.addFeature(featureEnum, featureMap);
             }
+
+
+            // process metadata
+            for (Map.Entry<String, Object> entry : metadatas.entrySet()) {
+                String metadataName = entry.getKey();
+                Map<String, Object> metadataMap = (Map<String, Object>) entry.getValue();
+                String fieldType = (String) metadataMap.get("type");
+                builder.addMetadata(metadataName, parserContext.typeParser(fieldType).parse(metadataName, metadataMap, parserContext));
+            }
+
             return builder;
         }
     }
@@ -164,8 +207,11 @@ public class ImageMapper implements Mapper {
 
     private volatile ImmutableOpenMap<String, Mapper> hashMappers = ImmutableOpenMap.of();
 
+    private volatile ImmutableOpenMap<String, Mapper> metadataMappers = ImmutableOpenMap.of();
 
-    public ImageMapper(String name, ThreadPool threadPool, Map<FeatureEnum, Map<String, Object>> features, Map<String, Mapper> featureMappers, Map<String, Mapper> hashMappers) {
+
+    public ImageMapper(String name, ThreadPool threadPool, Map<FeatureEnum, Map<String, Object>> features, Map<String, Mapper> featureMappers,
+                       Map<String, Mapper> hashMappers, Map<String, Mapper> metadataMappers) {
         this.name = name;
         this.threadPool = threadPool;
         if (features != null) {
@@ -176,6 +222,9 @@ public class ImageMapper implements Mapper {
         }
         if (hashMappers != null) {
             this.hashMappers = ImmutableOpenMap.builder(this.hashMappers).putAll(hashMappers).build();
+        }
+        if (metadataMappers != null) {
+            this.metadataMappers = ImmutableOpenMap.builder(this.metadataMappers).putAll(metadataMappers).build();
         }
     }
 
@@ -252,9 +301,9 @@ public class ImageMapper implements Mapper {
                     lireFeature.extract(img);
                 }
                 byte[] parsedContent = lireFeature.getByteArrayRepresentation();
-                String featureFieldName = name + "." + featureEnum.name();
 
                 // todo: BinaryFieldMapper doesn't support externalValue, https://github.com/elasticsearch/elasticsearch/pull/4986
+                String featureFieldName = name + "." + featureEnum.name();
                 StoredField featureField = new StoredField(featureFieldName, parsedContent);
                 context.doc().add(featureField);
 
@@ -270,7 +319,7 @@ public class ImageMapper implements Mapper {
                             hashVals = LocalitySensitiveHashing.generateHashes(lireFeature.getDoubleHistogram());
                         }
 
-                        String mapperName = featureEnum.name() + "." + h;
+                        String mapperName = featureEnum.name() + "." + HASH + "." + h;
                         Mapper hashMapper = hashMappers.get(mapperName);
                         context.externalValue(SerializationUtils.arrayToString(hashVals));
                         hashMapper.parse(context);
@@ -280,6 +329,27 @@ public class ImageMapper implements Mapper {
                 throw new ElasticsearchImageProcessException("Failed to index feature " + featureEnum.name(), e);
             }
         }
+
+        // process metadata if required
+        if (!metadataMappers.isEmpty()) {
+            try {
+                Metadata metadata = ImageMetadataReader.readMetadata(new BufferedInputStream(new BytesStreamInput(content, false)), false);
+                for (Directory directory : metadata.getDirectories()) {
+                    for (Tag tag : directory.getTags()) {
+                        String metadataName = tag.getDirectoryName().toLowerCase().replaceAll("\\s+", "_") + "." +
+                                tag.getTagName().toLowerCase().replaceAll("\\s+", "_");
+                        if (metadataMappers.containsKey(metadataName)) {
+                            Mapper mapper = metadataMappers.get(metadataName);
+                            context.externalValue(tag.getDescription());
+                            mapper.parse(context);
+                        }
+                    }
+                }
+            } catch (ImageProcessingException e) {
+                logger.warn("Failed to extract metadata from image", e);
+            }
+        }
+
 
     }
 
@@ -293,6 +363,9 @@ public class ImageMapper implements Mapper {
             cursor.value.traverse(fieldMapperListener);
         }
         for (ObjectObjectCursor<String, Mapper> cursor : hashMappers) {
+            cursor.value.traverse(fieldMapperListener);
+        }
+        for (ObjectObjectCursor<String, Mapper> cursor : metadataMappers) {
             cursor.value.traverse(fieldMapperListener);
         }
     }
@@ -312,9 +385,15 @@ public class ImageMapper implements Mapper {
 
         builder.field("type", CONTENT_TYPE);
 
-        builder.startObject("feature");
+        builder.startObject(FEATURE);
         for (ObjectObjectCursor<FeatureEnum, Map<String, Object>> cursor : features) {
             builder.field(cursor.key.name(), cursor.value);
+        }
+        builder.endObject();
+
+        builder.startObject(METADATA);
+        for (ObjectObjectCursor<String, Mapper> cursor : metadataMappers) {
+            cursor.value.toXContent(builder, params);
         }
         builder.endObject();
 
