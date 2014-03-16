@@ -10,8 +10,14 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.ElasticsearchImageProcessException;
+import org.elasticsearch.action.get.GetRequest;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.get.GetField;
 import org.elasticsearch.index.mapper.image.FeatureEnum;
 import org.elasticsearch.index.mapper.image.HashEnum;
 import org.elasticsearch.index.mapper.image.ImageMapper;
@@ -27,6 +33,12 @@ public class ImageQueryParser implements QueryParser {
 
     public static final String NAME = "image";
 
+    private Client client;
+
+    @Inject
+    public ImageQueryParser(Client client) {
+        this.client = client;
+    }
 
     @Override
     public String[] names() {
@@ -50,6 +62,12 @@ public class ImageQueryParser implements QueryParser {
         float boost = 1.0f;
         int limit = -1;
 
+        String lookupIndex = parseContext.index().name();
+        String lookupType = null;
+        String lookupId = null;
+        String lookupPath = null;
+        String lookupRouting = null;
+
 
         token = parser.nextToken();
         if (token == XContentParser.Token.START_OBJECT) {
@@ -68,6 +86,16 @@ public class ImageQueryParser implements QueryParser {
                         boost = parser.floatValue();
                     } else if ("limit".equals(currentFieldName)) {
                         limit = parser.intValue();
+                    }else if ("index".equals(currentFieldName)) {
+                        lookupIndex = parser.text();
+                    } else if ("type".equals(currentFieldName)) {
+                        lookupType = parser.text();
+                    } else if ("id".equals(currentFieldName)) {
+                        lookupId = parser.text();
+                    } else if ("path".equals(currentFieldName)) {
+                        lookupPath = parser.text();
+                    } else if ("routing".equals(currentFieldName)) {
+                        lookupRouting = parser.textOrNull();
                     } else {
                         throw new QueryParsingException(parseContext.index(), "[image] query does not support [" + currentFieldName + "]");
                     }
@@ -79,22 +107,41 @@ public class ImageQueryParser implements QueryParser {
         if (featureEnum == null) {
             throw new QueryParsingException(parseContext.index(), "No feature specified for image query");
         }
-        if (image == null) {
+
+        String luceneFieldName = fieldName + "." + featureEnum.name();
+        LireFeature feature = null;
+
+        if (image != null) {
+            try {
+                feature = featureEnum.getFeatureClass().newInstance();
+                BufferedImage img = ImageIO.read(new BytesStreamInput(image, false));
+                if (Math.max(img.getHeight(), img.getWidth()) > ImageMapper.MAX_IMAGE_DIMENSION) {
+                    img = ImageUtils.scaleImage(img, ImageMapper.MAX_IMAGE_DIMENSION);
+                }
+                feature.extract(img);
+            } catch (Exception e) {
+                throw new ElasticsearchImageProcessException("Failed to parse image", e);
+            }
+        } else if (lookupIndex != null && lookupType != null && lookupId != null && lookupPath != null) {
+            String lookupFieldName = lookupPath + "." + featureEnum.name();
+            GetResponse getResponse = client.get(new GetRequest(lookupIndex, lookupType, lookupId).preference("_local").routing(lookupRouting).fields(lookupFieldName).realtime(false)).actionGet();
+            if (getResponse.isExists()) {
+                GetField getField = getResponse.getField(lookupFieldName);
+                if (getField != null) {
+                    BytesReference bytesReference = (BytesReference) getField.getValue();
+                    try {
+                        feature = featureEnum.getFeatureClass().newInstance();
+                        feature.setByteArrayRepresentation(bytesReference.array(), bytesReference.arrayOffset(), bytesReference.length());
+                    } catch (Exception e) {
+                        throw new ElasticsearchImageProcessException("Failed to parse image", e);
+                    }
+                }
+            }
+        }
+        if (feature == null) {
             throw new QueryParsingException(parseContext.index(), "No image specified for image query");
         }
 
-        String luceneFieldName = fieldName + "." + featureEnum.name();
-        LireFeature feature;
-        try {
-            feature = featureEnum.getFeatureClass().newInstance();
-            BufferedImage img = ImageIO.read(new BytesStreamInput(image, false));
-            if (Math.max(img.getHeight(), img.getWidth()) > ImageMapper.MAX_IMAGE_DIMENSION) {
-                img = ImageUtils.scaleImage(img, ImageMapper.MAX_IMAGE_DIMENSION);
-            }
-            feature.extract(img);
-        } catch (Exception e) {
-            throw new ElasticsearchImageProcessException("Failed to parse image", e);
-        }
 
         if (hashEnum == null) {  // no hash, need to scan all documents
             return new ImageQuery(luceneFieldName, feature, boost);

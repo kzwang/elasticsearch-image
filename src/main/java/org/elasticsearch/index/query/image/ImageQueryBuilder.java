@@ -21,6 +21,16 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
 
     private int limit = -1;
 
+    private String lookupIndex;
+
+    private String lookupType;
+
+    private String lookupId;
+
+    private String lookupRouting;
+
+    private String lookupPath;
+
     public ImageQueryBuilder(String fieldName) {
         this.fieldName = fieldName;
     }
@@ -45,6 +55,31 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
         return this;
     }
 
+    public ImageQueryBuilder lookupIndex(String lookupIndex) {
+        this.lookupIndex = lookupIndex;
+        return this;
+    }
+
+    public ImageQueryBuilder lookupType(String lookupType) {
+        this.lookupType = lookupType;
+        return this;
+    }
+
+    public ImageQueryBuilder lookupId(String lookupId) {
+        this.lookupId = lookupId;
+        return this;
+    }
+
+    public ImageQueryBuilder lookupPath(String lookupPath) {
+        this.lookupPath = lookupPath;
+        return this;
+    }
+
+    public ImageQueryBuilder lookupRouting(String lookupRouting) {
+        this.lookupRouting = lookupRouting;
+        return this;
+    }
+
     @Override
     public ImageQueryBuilder boost(float boost) {
         this.boost = boost;
@@ -57,7 +92,21 @@ public class ImageQueryBuilder extends BaseQueryBuilder implements BoostableQuer
 
         builder.startObject(fieldName);
         builder.field("feature", feature);
-        builder.field("image", image);
+
+        if (image != null) {
+            builder.field("image", image);
+        }
+
+
+        if (lookupIndex != null) {
+            builder.field("index", lookupIndex);
+        }
+        builder.field("type", lookupType);
+        builder.field("id", lookupId);
+        if (lookupRouting != null) {
+            builder.field("routing", lookupRouting);
+        }
+        builder.field("path", lookupPath);
 
         if (hash != null) {
             builder.field("hash", hash);

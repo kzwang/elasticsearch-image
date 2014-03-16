@@ -3,6 +3,7 @@ package org.elasticsearch.plugin.image.test;
 import org.apache.sanselan.ImageFormat;
 import org.apache.sanselan.ImageWriteException;
 import org.apache.sanselan.Sanselan;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.common.settings.Settings;
@@ -58,18 +59,21 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         // generate random images and index
         String nameToSearch = null;
         byte[] imgToSearch = null;
+        String idToSearch = null;
         for (int i = 0; i < totalImages; i ++) {
             byte[] imageByte = getRandomImage();
             String name = randomAsciiOfLength(5);
-            index("test", "test", jsonBuilder().startObject().field("img", imageByte).field("name", name).endObject());
-            if (nameToSearch == null || imgToSearch == null) {
+            IndexResponse response = index("test", "test", jsonBuilder().startObject().field("img", imageByte).field("name", name).endObject());
+            if (nameToSearch == null || imgToSearch == null || idToSearch == null) {
                 nameToSearch = name;
                 imgToSearch = imageByte;
+                idToSearch = response.getId();
             }
         }
 
 
         refresh();
+
 
         // test search with hash
         ImageQueryBuilder imageQueryBuilder = new ImageQueryBuilder("img").feature(FeatureEnum.CEDD.name()).image(imgToSearch).hash(HashEnum.BIT_SAMPLING.name());
@@ -118,6 +122,26 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         assertNoFailures(searchResponse5);
         SearchHits hits5 = searchResponse5.getHits();
         assertThat("Should match at least one record", hits5.getTotalHits(), greaterThanOrEqualTo(1l)); // if using hash, total result maybe different than number of images
+
+        // test search with exist image
+        ImageQueryBuilder imageQueryBuilder6 = new ImageQueryBuilder("img").feature(FeatureEnum.CEDD.name()).lookupIndex("test").lookupType("test").lookupId(idToSearch).lookupPath("img");
+        SearchResponse searchResponse6 = client().prepareSearch("test").setTypes("test").setQuery(imageQueryBuilder6).get();
+        assertNoFailures(searchResponse6);
+        SearchHits hits6 = searchResponse6.getHits();
+        assertThat("Should match at least one image", hits6.getTotalHits(), equalTo((long) totalImages));
+        SearchHit hit6 = hits6.getHits()[0];
+        assertThat("First should be exact match and has score 1", hit6.getScore(), equalTo(1.0f));
+        assertImageScore(hits6, nameToSearch, 1.0f);
+
+        // test search with exist image using hash
+        ImageQueryBuilder imageQueryBuilder7 = new ImageQueryBuilder("img").feature(FeatureEnum.CEDD.name()).lookupIndex("test").lookupType("test").lookupId(idToSearch).lookupPath("img").hash(HashEnum.BIT_SAMPLING.name());
+        SearchResponse searchResponse7 = client().prepareSearch("test").setTypes("test").setQuery(imageQueryBuilder7).get();
+        assertNoFailures(searchResponse7);
+        SearchHits hits7 = searchResponse7.getHits();
+        assertThat("Should match at least one image", hits7.getTotalHits(), equalTo((long) totalImages));
+        SearchHit hit7 = hits7.getHits()[0];
+        assertThat("First should be exact match and has score 1", hit7.getScore(), equalTo(1.0f));
+        assertImageScore(hits7, nameToSearch, 1.0f);
 
     }
 
