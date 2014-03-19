@@ -49,6 +49,7 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         return settingsBuilder()
                 .put("index.number_of_replicas", 0)
                 .put("index.number_of_shards", 5)
+                .put("index.image.use_thread_pool", randomBoolean())
             .build();
     }
 
@@ -143,7 +144,6 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
         SearchHit hit7 = hits7.getHits()[0];
         assertThat("First should be exact match and has score 1", hit7.getScore(), equalTo(1.0f));
         assertImageScore(hits7, nameToSearch, 1.0f);
-
     }
 
     private void assertImageScore(SearchHits hits, String name, float score) {
@@ -158,12 +158,12 @@ public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
     }
 
     private byte[] getRandomImage() throws IOException, ImageWriteException {
-        int width = randomIntBetween(10, 50);
-        int height = randomIntBetween(10, 50);
+        int width = randomIntBetween(10, 200);
+        int height = randomIntBetween(10, 200);
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         for (int j = 0; j < width; j ++) {
             for (int k = 0; k < height; k ++) {
-                image.setRGB(j, k, randomInt(256));
+                image.setRGB(j, k, randomInt(512));
             }
         }
         ImageFormat format = ImageFormat.IMAGE_FORMAT_TIFF;

@@ -21,6 +21,7 @@ import org.elasticsearch.common.hppc.cursors.ObjectObjectCursor;
 import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.*;
@@ -126,7 +127,7 @@ public class ImageMapper implements Mapper {
             context.path().remove();  // remove METADATA
             context.path().remove();  // remove name
 
-            return new ImageMapper(name, threadPool, features, featureMappers, hashMappers, metadataMappers);
+            return new ImageMapper(name, threadPool, context.indexSettings(), features, featureMappers, hashMappers, metadataMappers);
         }
     }
 
@@ -201,6 +202,8 @@ public class ImageMapper implements Mapper {
 
     private final ThreadPool threadPool;
 
+    private final Settings settings;
+
     private volatile ImmutableOpenMap<FeatureEnum, Map<String, Object>> features = ImmutableOpenMap.of();
 
     private volatile ImmutableOpenMap<String, Mapper> featureMappers = ImmutableOpenMap.of();
@@ -210,10 +213,11 @@ public class ImageMapper implements Mapper {
     private volatile ImmutableOpenMap<String, Mapper> metadataMappers = ImmutableOpenMap.of();
 
 
-    public ImageMapper(String name, ThreadPool threadPool, Map<FeatureEnum, Map<String, Object>> features, Map<String, Mapper> featureMappers,
+    public ImageMapper(String name, ThreadPool threadPool, Settings settings, Map<FeatureEnum, Map<String, Object>> features, Map<String, Mapper> featureMappers,
                        Map<String, Mapper> hashMappers, Map<String, Mapper> metadataMappers) {
         this.name = name;
         this.threadPool = threadPool;
+        this.settings = settings;
         if (features != null) {
             this.features = ImmutableOpenMap.builder(this.features).putAll(features).build();
         }
@@ -247,6 +251,9 @@ public class ImageMapper implements Mapper {
             throw new MapperParsingException("No content is provided.");
         }
 
+        final Boolean useThreadPool = settings.getAsBoolean("index.image.use_thread_pool", true);
+        final Boolean ignoreMetadataError = settings.getAsBoolean("index.image.ignore_metadata_error", true);
+
         BufferedImage img = ImageIO.read(new BytesStreamInput(content, false));
         if (Math.max(img.getHeight(), img.getWidth()) > MAX_IMAGE_DIMENSION) {
             img = ImageUtils.scaleImage(img, MAX_IMAGE_DIMENSION);
@@ -258,7 +265,7 @@ public class ImageMapper implements Mapper {
         final Map<FeatureEnum, LireFeature> featureExtractMap = new MapMaker().makeMap();
 
         // have multiple features, use ThreadPool to process each feature
-        if (features.size() > 1) {
+        if (useThreadPool && features.size() > 1) {
             final CountDownLatch latch = new CountDownLatch(features.size());
             Executor executor = threadPool.generic();
 
@@ -346,7 +353,10 @@ public class ImageMapper implements Mapper {
                     }
                 }
             } catch (ImageProcessingException e) {
-                logger.warn("Failed to extract metadata from image", e);
+                logger.error("Failed to extract metadata from image", e);
+                if (!ignoreMetadataError) {
+                    throw new ElasticsearchImageProcessException("Failed to extract metadata from image", e);
+                }
             }
         }
 
