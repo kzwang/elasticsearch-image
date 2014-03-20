@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.kzwang</groupId>
     <artifactId>elasticsearch-image</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>Image Plugin for ElasticSearch</description>
     <url>http://github.com/kzwang/elasticsearch-image</url>
