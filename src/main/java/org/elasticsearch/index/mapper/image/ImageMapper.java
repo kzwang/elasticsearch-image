@@ -309,10 +309,9 @@ public class ImageMapper implements Mapper {
                 }
                 byte[] parsedContent = lireFeature.getByteArrayRepresentation();
 
-                // todo: BinaryFieldMapper doesn't support externalValue, https://github.com/elasticsearch/elasticsearch/pull/4986
-                String featureFieldName = name + "." + featureEnum.name();
-                StoredField featureField = new StoredField(featureFieldName, parsedContent);
-                context.doc().add(featureField);
+                Mapper featureMapper = featureMappers.get(featureEnum.name());
+                context.externalValue(parsedContent);
+                featureMapper.parse(context);
 
                 // add hash if required
                 if (featureMap.containsKey(HASH)) {

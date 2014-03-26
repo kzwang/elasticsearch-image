@@ -13,7 +13,7 @@ In order to install the plugin, simply run: `bin/plugin -install com.github.kzwa
 
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
-| 1.3.0-SNAPSHOT (master)   | 1.0.1             |              |
+| 1.3.0-SNAPSHOT (master)   | 1.1.0             |              |
 | 1.2.0                     | 1.0.1             | 2014-03-20   |
 | 1.1.0                     | 1.0.1             | 2014-03-13   |
 | 1.0.0                     | 1.0.1             | 2014-03-05   |
