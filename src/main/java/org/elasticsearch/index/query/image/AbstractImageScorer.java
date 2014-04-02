@@ -1,11 +1,12 @@
 package org.elasticsearch.index.query.image;
 
 import net.semanticmetadata.lire.imageanalysis.LireFeature;
-import org.apache.lucene.document.Document;
+import org.apache.lucene.index.AtomicReader;
+import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchImageProcessException;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ public abstract class AbstractImageScorer extends Scorer {
     private final LireFeature lireFeature;
     private final IndexReader reader;
     private final float boost;
+    private BinaryDocValues binaryDocValues;
 
     protected AbstractImageScorer(Weight weight, String luceneFieldName, LireFeature lireFeature, IndexReader reader,
                                   float boost) {
@@ -32,20 +34,17 @@ public abstract class AbstractImageScorer extends Scorer {
     @Override
     public float score() throws IOException {
         assert docID() != NO_MORE_DOCS;
-        Document document = reader.document(docID());
+
+        if (binaryDocValues == null) {
+            AtomicReader atomicReader = (AtomicReader) reader;
+            binaryDocValues = atomicReader.getBinaryDocValues(luceneFieldName);
+        }
+
         try {
-            byte[] docImage = null;
-            for (IndexableField f : document.getFields()) {
-                if (f.name().equals(luceneFieldName)) {
-                    docImage = f.binaryValue().bytes;
-                    break;
-                }
-            }
-            if (docImage == null) {
-                throw new ElasticsearchImageProcessException("Can't find " + luceneFieldName);
-            }
+            BytesRef bytesRef = new BytesRef();
+            binaryDocValues.get(docID(), bytesRef);
             LireFeature docFeature = lireFeature.getClass().newInstance();
-            docFeature.setByteArrayRepresentation(docImage);
+            docFeature.setByteArrayRepresentation(bytesRef.bytes);
 
             float distance = lireFeature.getDistance(docFeature);
             float score;

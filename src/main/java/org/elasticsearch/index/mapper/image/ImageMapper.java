@@ -10,7 +10,8 @@ import net.semanticmetadata.lire.indexing.hashing.BitSampling;
 import net.semanticmetadata.lire.indexing.hashing.LocalitySensitiveHashing;
 import net.semanticmetadata.lire.utils.ImageUtils;
 import net.semanticmetadata.lire.utils.SerializationUtils;
-import org.apache.lucene.document.StoredField;
+import org.apache.lucene.document.BinaryDocValuesField;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ElasticsearchImageProcessException;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
@@ -312,6 +313,7 @@ public class ImageMapper implements Mapper {
                 Mapper featureMapper = featureMappers.get(featureEnum.name());
                 context.externalValue(parsedContent);
                 featureMapper.parse(context);
+                context.doc().add(new BinaryDocValuesField(name() + "." + featureEnum.name(), new BytesRef(parsedContent)));
 
                 // add hash if required
                 if (featureMap.containsKey(HASH)) {
