@@ -107,14 +107,13 @@ public class ImageHashLimitQuery extends Query {
         }
 
         @Override
-        public Scorer scorer(AtomicReaderContext context, boolean scoreDocsInOrder,
-                             boolean topScorer, Bits acceptDocs) throws IOException {
+        public Scorer scorer(AtomicReaderContext context, Bits acceptDocs) throws IOException {
             return new ImageHashScorer(this, bitSet, context, acceptDocs);
         }
 
         @Override
         public Explanation explain(AtomicReaderContext context, int doc) throws IOException {
-            Scorer scorer = scorer(context, true, false, context.reader().getLiveDocs());
+            Scorer scorer = scorer(context, context.reader().getLiveDocs());
             if (scorer != null) {
                 int newDoc = scorer.advance(doc);
                 if (newDoc == doc) {
