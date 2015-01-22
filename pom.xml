@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.kzwang</groupId>
     <artifactId>elasticsearch-image</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>Image Plugin for ElasticSearch</description>
     <url>http://github.com/kzwang/elasticsearch-image</url>
@@ -38,8 +38,8 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>1.3.2</elasticsearch.version>
-        <lucene.version>4.9.0</lucene.version>
+        <elasticsearch.version>1.4.2</elasticsearch.version>
+        <lucene.version>4.10.2</lucene.version>
         <tests.jvms>1</tests.jvms>
         <tests.shuffle>true</tests.shuffle>
         <tests.output>onerror</tests.output>
@@ -52,6 +52,14 @@
             <artifactId>lucene-test-framework</artifactId>
             <version>${lucene.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>randomizedtesting-runner</artifactId>
+                    <groupId>
+                        com.carrotsearch.randomizedtesting
+                    </groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -91,6 +99,13 @@
             <artifactId>elasticsearch</artifactId>
             <version>${elasticsearch.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.carrotsearch.randomizedtesting</groupId>
+            <artifactId>randomizedtesting-runner</artifactId>
+            <version>2.1.10</version>
             <scope>test</scope>
         </dependency>
 
@@ -139,7 +154,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.1</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
@@ -148,7 +163,7 @@
             <plugin>
                 <groupId>com.carrotsearch.randomizedtesting</groupId>
                 <artifactId>junit4-maven-plugin</artifactId>
-                <version>2.0.15</version>
+                <version>2.1.1</version>
                 <executions>
                     <execution>
                         <id>tests</id>
