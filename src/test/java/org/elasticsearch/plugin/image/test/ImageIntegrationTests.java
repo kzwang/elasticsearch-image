@@ -29,7 +29,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertNoFailures;
 import static org.hamcrest.Matchers.*;
 
-public class ImageIntegrationTests extends ElasticsearchIntegrationTest {
+public class ImageIntegrationTests extends ElasticsearchHeadlessIntegrationTest {
 
     private final static String INDEX_NAME = "test";
     private final static String DOC_TYPE_NAME = "test";
