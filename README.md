@@ -1,7 +1,7 @@
 Image Plugin for Elasticsearch
 ==================================
 
-[![Build Status](https://travis-ci.org/kzwang/elasticsearch-image.png?branch=master)](https://travis-ci.org/kzwang/elasticsearch-image)
+[![Build Status](https://travis-ci.org/Endource/elasticsearch-image.png?branch=master)](https://travis-ci.org/Endource/elasticsearch-image)
 
 The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch using [LIRE (Lucene Image Retrieval)](https://code.google.com/p/lire/). It allows users to index images and search for similar images.
 
