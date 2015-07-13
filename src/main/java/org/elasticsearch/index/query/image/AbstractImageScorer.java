@@ -41,8 +41,7 @@ public abstract class AbstractImageScorer extends Scorer {
         }
 
         try {
-            BytesRef bytesRef = new BytesRef();
-            binaryDocValues.get(docID(), bytesRef);
+            BytesRef bytesRef = binaryDocValues.get(docID());
             LireFeature docFeature = lireFeature.getClass().newInstance();
             docFeature.setByteArrayRepresentation(bytesRef.bytes);
 

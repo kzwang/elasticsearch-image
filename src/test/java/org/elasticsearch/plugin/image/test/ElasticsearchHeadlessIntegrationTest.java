@@ -15,4 +15,9 @@ public class ElasticsearchHeadlessIntegrationTest extends ElasticsearchIntegrati
     public void cleanupSystemProperties() throws Exception {
         System.getProperties().remove("sun.font.fontmanager");
     }
+
+    @After
+    public void cleanupCluster() {
+        cluster().wipe();
+    }
 }

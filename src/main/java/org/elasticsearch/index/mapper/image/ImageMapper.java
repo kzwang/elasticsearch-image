@@ -255,7 +255,7 @@ public class ImageMapper implements Mapper {
         final Boolean useThreadPool = settings.getAsBoolean("index.image.use_thread_pool", true);
         final Boolean ignoreMetadataError = settings.getAsBoolean("index.image.ignore_metadata_error", true);
 
-        BufferedImage img = ImageIO.read(new BytesStreamInput(content, false));
+        BufferedImage img = ImageIO.read(new BytesStreamInput(content));
         if (Math.max(img.getHeight(), img.getWidth()) > MAX_IMAGE_DIMENSION) {
             img = ImageUtils.scaleImage(img, MAX_IMAGE_DIMENSION);
         }
@@ -311,7 +311,8 @@ public class ImageMapper implements Mapper {
                 byte[] parsedContent = lireFeature.getByteArrayRepresentation();
 
                 Mapper featureMapper = featureMappers.get(featureEnum.name());
-                context.externalValue(parsedContent);
+//                context.externalValue(parsedContent);
+                context = context.createExternalValueContext(parsedContent);
                 featureMapper.parse(context);
                 context.doc().add(new BinaryDocValuesField(name() + "." + featureEnum.name(), new BytesRef(parsedContent)));
 
@@ -329,7 +330,8 @@ public class ImageMapper implements Mapper {
 
                         String mapperName = featureEnum.name() + "." + HASH + "." + h;
                         Mapper hashMapper = hashMappers.get(mapperName);
-                        context.externalValue(SerializationUtils.arrayToString(hashVals));
+//                        context.externalValue(SerializationUtils.arrayToString(hashVals));
+                        context = context.createExternalValueContext(SerializationUtils.arrayToString(hashVals));
                         hashMapper.parse(context);
                     }
                 }
@@ -341,14 +343,14 @@ public class ImageMapper implements Mapper {
         // process metadata if required
         if (!metadataMappers.isEmpty()) {
             try {
-                Metadata metadata = ImageMetadataReader.readMetadata(new BufferedInputStream(new BytesStreamInput(content, false)), false);
+                Metadata metadata = ImageMetadataReader.readMetadata(new BufferedInputStream(new BytesStreamInput(content)), false);
                 for (Directory directory : metadata.getDirectories()) {
                     for (Tag tag : directory.getTags()) {
                         String metadataName = tag.getDirectoryName().toLowerCase().replaceAll("\\s+", "_") + "." +
                                 tag.getTagName().toLowerCase().replaceAll("\\s+", "_");
                         if (metadataMappers.containsKey(metadataName)) {
                             Mapper mapper = metadataMappers.get(metadataName);
-                            context.externalValue(tag.getDescription());
+                            context = context.createExternalValueContext(tag.getDescription());
                             mapper.parse(context);
                         }
                     }

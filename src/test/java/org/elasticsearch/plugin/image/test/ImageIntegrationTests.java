@@ -6,6 +6,7 @@ import org.apache.sanselan.Sanselan;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.collect.Maps;
+import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.mapper.image.FeatureEnum;
 import org.elasticsearch.index.mapper.image.HashEnum;
@@ -13,6 +14,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.query.image.ImageQueryBuilder;
+import org.elasticsearch.plugins.PluginsService;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -29,17 +31,24 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertNoFailures;
 import static org.hamcrest.Matchers.*;
 
+@ElasticsearchIntegrationTest.ClusterScope(scope = ElasticsearchIntegrationTest.Scope.SUITE)
 public class ImageIntegrationTests extends ElasticsearchHeadlessIntegrationTest {
 
     private final static String INDEX_NAME = "test";
     private final static String DOC_TYPE_NAME = "test";
 
 
+    @Override
+    protected Settings nodeSettings(int nodeOrdinal) {
+        return ImmutableSettings.builder()
+                .put(super.nodeSettings(nodeOrdinal))
+                .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
+                .build();
+    }
 
     @Before
     public void createEmptyIndex() throws Exception {
         logger.info("creating index [{}]", INDEX_NAME);
-        wipeIndices(INDEX_NAME);
         createIndex(INDEX_NAME);
         ensureGreen();
     }
