@@ -13,7 +13,7 @@ In order to install the plugin, simply run: `bin/plugin -install com.github.kzwa
 
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
-| 1.3.0-SNAPSHOT (master)   | 1.1.0             |              |
+| 1.3.0-M1 (master)         | 1.6.0             |              |
 | 1.2.0                     | 1.0.1             | 2014-03-20   |
 | 1.1.0                     | 1.0.1             | 2014-03-13   |
 | 1.0.0                     | 1.0.1             | 2014-03-05   |
@@ -154,6 +154,11 @@ See [Large image data sets with LIRE ?some new numbers](http://www.semanticmetad
 | index.image.ignore_metadata_error| ignore errors happened during extract metadata from image | True |
 
 ## ChangeLog
+
+#### 1.3.0-M1 (2015-07-17)
+
+- Upgraded to Elasticsearch 1.6.0 and compatible dependencies
+- Fix tests on OSX
 
 #### 1.2.0 (2014-03-20)
 
