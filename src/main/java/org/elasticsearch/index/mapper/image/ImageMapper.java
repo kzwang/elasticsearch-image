@@ -343,7 +343,7 @@ public class ImageMapper implements Mapper {
         // process metadata if required
         if (!metadataMappers.isEmpty()) {
             try {
-                Metadata metadata = ImageMetadataReader.readMetadata(new BufferedInputStream(new BytesStreamInput(content)), false);
+                Metadata metadata = ImageMetadataReader.readMetadata(new BufferedInputStream(new BytesStreamInput(content)));
                 for (Directory directory : metadata.getDirectories()) {
                     for (Tag tag : directory.getTags()) {
                         String metadataName = tag.getDirectoryName().toLowerCase().replaceAll("\\s+", "_") + "." +
