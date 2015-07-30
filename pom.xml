@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.endource</groupId>
     <artifactId>elasticsearch-image</artifactId>
-    <version>1.4.x-SNAPSHOT</version>
+    <version>1.4.0-RC1</version>
     <packaging>jar</packaging>
     <description>Image Plugin for ElasticSearch</description>
     <url>http://github.com/endource/elasticsearch-image</url>
@@ -57,6 +57,13 @@
         <es.logger.level>INFO</es.logger.level>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>endource</id>
+            <url>https://dl.bintray.com/endource/maven/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
 
         <dependency>
@@ -81,9 +88,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.kzwang</groupId>  <!-- Modified to deploy on maven -->
+            <groupId>com.endource</groupId>  <!-- Modified to deploy on maven -->
             <artifactId>lire</artifactId>
-            <version>0.9.4-kzwang-beta1</version>
+            <version>0.9.6-M1</version>
         </dependency>
 
         <dependency>
