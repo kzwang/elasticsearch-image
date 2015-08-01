@@ -114,7 +114,7 @@ public class ImageQueryParser implements QueryParser {
         if (image != null) {
             try {
                 feature = featureEnum.getFeatureClass().newInstance();
-                BufferedImage img = ImageIO.read(new BytesStreamInput(image, false));
+                BufferedImage img = ImageIO.read(new BytesStreamInput(image));
                 if (Math.max(img.getHeight(), img.getWidth()) > ImageMapper.MAX_IMAGE_DIMENSION) {
                     img = ImageUtils.scaleImage(img, ImageMapper.MAX_IMAGE_DIMENSION);
                 }
