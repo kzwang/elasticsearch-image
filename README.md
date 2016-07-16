@@ -123,7 +123,7 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
 
 
 ### Metadata
-Metadata are extracted using [metadata-extractor](https://code.google.com/p/metadata-extractor/). See [SampleOutput](https://code.google.com/p/metadata-extractor/wiki/SampleOutput) for some examples of metadata.
+Metadata are extracted using [metadata-extractor](https://github.com/drewnoakes/metadata-extractor/wiki). See [SampleOutput](https://github.com/drewnoakes/metadata-extractor/wiki/SampleOutput) for some examples of metadata.
 
 The field name in index will be `directory.tag_name`, all lower case and space becomes underscore(`_`). e.g. if the *Directory* is `JPEG` and *Tag Name* is `Image Height`, the field name will be `jpeg.image_height`
 
